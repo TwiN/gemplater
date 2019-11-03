@@ -6,6 +6,17 @@ type Template struct {
 	variables map[string]string
 }
 
+func NewTemplate() *Template {
+	return &Template{
+		variables: make(map[string]string),
+	}
+}
+
+func (t *Template) WithVariables(variables map[string]string) *Template {
+	t.variables = variables
+	return t
+}
+
 func (t *Template) AddVariable(key, value string) {
 	if t.variables == nil {
 		t.variables = make(map[string]string)

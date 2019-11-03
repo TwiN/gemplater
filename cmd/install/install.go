@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/TwinProduction/gemplater/template"
 	"github.com/spf13/cobra"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -14,11 +15,6 @@ import (
 type Options struct {
 	Destination string
 }
-
-var (
-	// Since the wrapper should be present at the beginning and the end of the variable name
-	ErrOddNumberOfSeparator = errors.New("uneven number of separator")
-)
 
 func NewInstallCmd() *cobra.Command {
 	options := &Options{}
@@ -49,14 +45,14 @@ func NewInstallCmd() *cobra.Command {
 					return err
 				}
 				content := string(rawContent)
-				variables, err := InteractiveVariables(content)
+				variables, err := InteractiveVariables(content, os.Stdin)
 				if err != nil {
 					return err
 				}
-				_ = template.NewTemplate().WithVariables(variables).Replace(content)
+				output := template.NewTemplate().WithVariables(variables).Replace(content)
 				// If no destination provided, the output will be stdout
 				if len(options.Destination) == 0 {
-					//fmt.Println(output)
+					fmt.Println(output)
 				}
 			}
 			return nil
@@ -70,17 +66,19 @@ func NewInstallCmd() *cobra.Command {
 	return cmd
 }
 
-func InteractiveVariables(fileContent string) (map[string]string, error) {
+func InteractiveVariables(fileContent string, input io.Reader) (map[string]string, error) {
 	variableNames, err := ExtractVariablesFromString(fileContent, "__")
 	if err != nil {
 		return nil, err
 	}
 	variables := make(map[string]string)
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(input)
 	for _, variable := range variableNames {
-		fmt.Printf("Enter value for '%s': ", variable)
-		value, _ := reader.ReadString('\n')
-		variables[variable] = value
+		if _, exists := variables[variable]; !exists {
+			fmt.Printf("Enter value for '%s': ", variable)
+			value, _ := reader.ReadString('\n')
+			variables[variable] = strings.TrimSpace(value)
+		}
 	}
 	return variables, nil
 }
@@ -90,41 +88,37 @@ func ExtractVariablesFromString(s, wrapper string) (variableNames []string, err 
 	lines := strings.Split(s, "\n")
 	// Instead of doing it all at once, we'll do it line by line to reduce the odds of picking up a multiline variable
 	for _, line := range lines {
-		//elements := strings.Split(line, wrapper)
-		////if len(elements) % 2 == 0 {
-		////	continue
-		////}
-		//for i, element := range elements {
-		//
-		//	if i % 2 != 0 {
-		//		variableNames = append(variableNames, fmt.Sprintf("%s%s%s", wrapper, element, wrapper))
-		//		println(fmt.Sprintf("%s%s%s", wrapper, element, wrapper))
-		//	}
-		//}
-		variable, _ := getBetween(line, wrapper, wrapper)
-		if len(variable) > 0 {
-			variableNames = append(variableNames, fmt.Sprintf("%s%s%s", wrapper, variable, wrapper))
-			println(fmt.Sprintf("%s%s%s", wrapper, variable, wrapper))
+		variablesInLine := getAllBetween(line, wrapper, wrapper)
+		for _, variable := range variablesInLine {
+			if strings.Contains(variable, " ") {
+				continue
+			}
+			variableNames = append(variableNames, variable)
 		}
 	}
 	return
 }
 
-// Get substring between two strings.
-func getBetween(value string, a string, b string) (string, int) {
-	if len(value) < len(a)+len(b) {
-		return "", -1
+// Get all substrings between two strings
+// This variation does not strip the suffix and the prefix from the substring
+func getAllBetween(haystack, prefix, suffix string) (needles []string) {
+	for {
+		if len(haystack) < len(prefix)+len(suffix) {
+			break
+		}
+		start := strings.Index(haystack, prefix) + len(prefix)
+		if start-len(prefix) == -1 {
+			break
+		}
+		end := strings.Index(haystack[start:], suffix) + start
+		if end-start == -1 || start >= end {
+			break
+		}
+		needles = append(needles, haystack[start-len(prefix):end+len(suffix)])
+		if len(haystack) <= end {
+			break
+		}
+		haystack = haystack[end+len(suffix):]
 	}
-	start := strings.Index(value, a) + len(a)
-	if start == -1 {
-		return "", -1
-	}
-	end := strings.Index(value[start:], b) + start
-	if end == -1 {
-		return "", -1
-	}
-	if start >= end {
-		return "", -1
-	}
-	return value[start:end], end
+	return needles
 }

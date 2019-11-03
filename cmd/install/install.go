@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/TwinProduction/gemplater/template"
 	"github.com/spf13/cobra"
-	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -45,7 +44,7 @@ func NewInstallCmd() *cobra.Command {
 					return err
 				}
 				content := string(rawContent)
-				variables, err := InteractiveVariables(content, os.Stdin)
+				variables, err := InteractiveVariables(content)
 				if err != nil {
 					return err
 				}
@@ -53,6 +52,8 @@ func NewInstallCmd() *cobra.Command {
 				// If no destination provided, the output will be stdout
 				if len(options.Destination) == 0 {
 					fmt.Println(output)
+				} else {
+					return errors.New("file destination is not supported yet")
 				}
 			}
 			return nil
@@ -66,13 +67,13 @@ func NewInstallCmd() *cobra.Command {
 	return cmd
 }
 
-func InteractiveVariables(fileContent string, input io.Reader) (map[string]string, error) {
+func InteractiveVariables(fileContent string) (map[string]string, error) {
 	variableNames, err := ExtractVariablesFromString(fileContent, "__")
 	if err != nil {
 		return nil, err
 	}
 	variables := make(map[string]string)
-	reader := bufio.NewReader(input)
+	reader := bufio.NewReader(os.Stdin)
 	for _, variable := range variableNames {
 		if _, exists := variables[variable]; !exists {
 			fmt.Printf("Enter value for '%s': ", variable)

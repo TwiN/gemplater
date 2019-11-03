@@ -1,6 +1,8 @@
 package install
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestExtractVariablesFromString(t *testing.T) {
 	variables, err := ExtractVariablesFromString("export EDITOR=\"__EDITOR__\"\nexport GOPATH=\"__GOPATH__\"", "__")

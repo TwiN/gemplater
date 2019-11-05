@@ -7,6 +7,18 @@ It was originally created to allow some extra customizability to dotfiles reposi
 
 ## Usage
 
+
+```
+gemplater install FILE
+```
+
+e.g.:
+
+```
+gemplater install .profile
+```
+
+
 ...
 
 default config file: `.gemplater/defaults`

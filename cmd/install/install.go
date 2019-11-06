@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/TwinProduction/gemplater/core"
 	"github.com/TwinProduction/gemplater/template"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -15,7 +16,7 @@ type Options struct {
 	Destination string
 }
 
-func NewInstallCmd() *cobra.Command {
+func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 	options := &Options{}
 
 	cmd := &cobra.Command{
@@ -44,6 +45,7 @@ func NewInstallCmd() *cobra.Command {
 					return err
 				}
 				content := string(rawContent)
+				// TODO: get variables from file, if nothing in file or missing some variables, then use InteractiveVariables()
 				variables, err := InteractiveVariables(content)
 				if err != nil {
 					return err

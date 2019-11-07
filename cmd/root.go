@@ -23,7 +23,7 @@ func NewRootCmd() *cobra.Command {
 
 func Execute() {
 	rootCmd := NewRootCmd()
-	globalOptions := core.NewGlobalOptions(".gemplater")
+	globalOptions := core.NewGlobalOptions(".gemplater.yml")
 
 	rootCmd.PersistentFlags().StringVarP(&globalOptions.ConfigFile, "config", "c", globalOptions.ConfigFile, "Specify configuration file to use")
 

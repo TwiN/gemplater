@@ -20,11 +20,11 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 	options := &Options{}
 
 	cmd := &cobra.Command{
-		Use:     "install FILE",
+		Use:     "install FILE [DESTINATION]",
 		Aliases: []string{"i"},
 		Short:   "",
 		Long:    "",
-		Example: "gemplater install .profile",
+		Example: "gemplater install .profile ~/.profile",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fileName := args[0]

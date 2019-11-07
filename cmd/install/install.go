@@ -13,7 +13,7 @@ import (
 )
 
 type Options struct {
-	Destination string
+	IgnoreMissingVariables bool
 }
 
 func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
@@ -25,9 +25,13 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 		Short:   "",
 		Long:    "",
 		Example: "gemplater install .profile",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fileName := args[0]
+			var destination string
+			if len(args) > 1 {
+				destination = args[1]
+			}
 			fi, err := os.Lstat(fileName)
 			if err != nil {
 				return err
@@ -46,25 +50,27 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 				}
 				content := string(rawContent)
 				// TODO: get variables from file, if nothing in file or missing some variables, then use InteractiveVariables()
+				if options.IgnoreMissingVariables {
+					// ...
+				}
 				variables, err := InteractiveVariables(content)
 				if err != nil {
 					return err
 				}
 				output := template.NewTemplate().WithVariables(variables).Replace(content)
 				// If no destination provided, the output will be stdout
-				if len(options.Destination) == 0 {
-					fmt.Println(output)
+				if len(destination) == 0 {
+					println(output)
 				} else {
-					return errors.New("file destination is not supported yet")
+					fmt.Printf("Create file at '%s' from template '%s'\n", destination, fileName)
+					return ioutil.WriteFile(destination, []byte(output), 0644)
 				}
 			}
 			return nil
 		},
 	}
 
-	// This overrides the file configuration
-	cmd.Flags().StringVarP(&options.Destination, "destination", "d", options.Destination, "Where to output the resulting file(s). If no value is specified, the output will be stdout")
-	// TODO: flag to ignore missing variables
+	cmd.Flags().BoolVarP(&options.IgnoreMissingVariables, "ignore", "i", options.IgnoreMissingVariables, "Whether to ignore the missing variables")
 
 	return cmd
 }

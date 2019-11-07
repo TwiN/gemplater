@@ -9,14 +9,16 @@ It was originally created to allow some extra customizability to dotfiles reposi
 
 
 ```
-gemplater install FILE
+gemplater install FILE [DESTINATION]
 ```
 
 e.g.:
 
 ```
-gemplater install .profile
+gemplater install .profile ~/.profile
 ```
+
+If you do not specify the `DESTINATION`, the output will be printed in the console.
 
 
 ...

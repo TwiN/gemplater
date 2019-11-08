@@ -4,6 +4,7 @@ import (
 	"errors"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"os"
 )
 
 var (
@@ -15,9 +16,16 @@ type Config struct {
 	Variables map[string]string `yaml:"variables"`
 }
 
-func NewConfigFromFile(configFile string) (err error) {
-	configuration, err = parseConfigFile(configFile)
-	return
+// Creates a new Config struct
+// If the configuration file passed doesn't exist, an empty Config struct will be created instead.
+func NewConfig(configFile string) (*Config, error) {
+	configuration, err := parseConfigFile(configFile)
+	// Check if the file doesn't exist. If it doesn't, then return en empty Config
+	if os.IsNotExist(err) {
+		configuration = &Config{Variables: make(map[string]string)}
+		return configuration, nil
+	}
+	return configuration, err
 }
 
 func parseConfigFile(configFile string) (*Config, error) {
@@ -28,6 +36,9 @@ func parseConfigFile(configFile string) (*Config, error) {
 	var cfg Config
 	if err := yaml.Unmarshal(bytes, &cfg); err != nil {
 		return nil, err
+	}
+	if cfg.Variables == nil {
+		cfg.Variables = make(map[string]string)
 	}
 	return &cfg, nil
 }

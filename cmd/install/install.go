@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/TwinProduction/gemplater/config"
 	"github.com/TwinProduction/gemplater/core"
 	"github.com/TwinProduction/gemplater/template"
 	"github.com/spf13/cobra"
@@ -49,11 +50,7 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 					return err
 				}
 				content := string(rawContent)
-				// TODO: get variables from file, if nothing in file or missing some variables, then use InteractiveVariables()
-				if options.IgnoreMissingVariables {
-					// ...
-				}
-				variables, err := InteractiveVariables(content)
+				variables, err := getVariables(globalOptions.ConfigFile, content, options.IgnoreMissingVariables)
 				if err != nil {
 					return err
 				}
@@ -75,12 +72,31 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 	return cmd
 }
 
-func InteractiveVariables(fileContent string) (map[string]string, error) {
-	variableNames, err := ExtractVariablesFromString(fileContent, "__")
-	if err != nil {
+func getVariables(configFile, templateFileContent string, ignoreMissingVariables bool) (variables map[string]string, err error) {
+	cfg, err := config.Get()
+	// If the config hasn't been loaded, then load it
+	if err == config.ErrConfigNotLoaded {
+		if cfg, err = config.NewConfig(configFile); err != nil {
+			return nil, err
+		}
+	} else if err != nil {
 		return nil, err
 	}
-	variables := make(map[string]string)
+	variables = cfg.Variables
+	if !ignoreMissingVariables {
+		err = interactiveVariables(templateFileContent, variables)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return
+}
+
+func interactiveVariables(fileContent string, variables map[string]string) error {
+	variableNames, err := ExtractVariablesFromString(fileContent, "__")
+	if err != nil {
+		return err
+	}
 	reader := bufio.NewReader(os.Stdin)
 	for _, variable := range variableNames {
 		if _, exists := variables[variable]; !exists {
@@ -89,7 +105,7 @@ func InteractiveVariables(fileContent string) (map[string]string, error) {
 			variables[variable] = strings.TrimSpace(value)
 		}
 	}
-	return variables, nil
+	return nil
 }
 
 func ExtractVariablesFromString(s, wrapper string) (variableNames []string, err error) {

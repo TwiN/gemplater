@@ -6,6 +6,7 @@ import (
 	"github.com/TwinProduction/gemplater/config"
 	"github.com/TwinProduction/gemplater/core"
 	"github.com/TwinProduction/gemplater/template"
+	"github.com/TwinProduction/gemplater/util"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
@@ -13,11 +14,17 @@ import (
 )
 
 type Options struct {
-	IgnoreMissingVariables bool
+	IgnoreMissingVariables bool // -i --ignore
+	Quick                  bool // -q --quick
+	Remember               bool // -r --remember
 }
 
 func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
-	options := &Options{}
+	options := &Options{
+		IgnoreMissingVariables: false,
+		Quick:                  false,
+		Remember:               false,
+	}
 
 	cfg, err := config.Get()
 	// If the config hasn't been loaded, then load it
@@ -30,32 +37,32 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "install FILE [DESTINATION]",
+		Use:     "install TARGET [DESTINATION]",
 		Aliases: []string{"i"},
 		Short:   "",
 		Long:    "",
-		Example: "gemplater install .profile ~/.profile",
+		Example: "gemplater install .profile ~/.profile\ngemplater install .profile --quick --remember",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			filePath := args[0]
+			target := args[0]
 			var destination string
 			if len(args) > 1 {
 				destination = args[1]
 			}
-			fi, err := os.Lstat(filePath)
+			fi, err := os.Lstat(target)
 			if err != nil {
 				return err
 			}
 			fileOutputs := make(map[string]string)
-
+			// TODO: support URL target
 			if fi.IsDir() {
-				installDirectory(fileOutputs, filePath, cfg, options.IgnoreMissingVariables)
+				installDirectory(fileOutputs, target, cfg, options)
 			} else {
-				output, err := install(filePath, cfg, options.IgnoreMissingVariables)
+				output, err := install(target, cfg, options)
 				if err != nil {
 					return err
 				}
-				fileOutputs[filePath] = output
+				fileOutputs[target] = output
 			}
 
 			for sourcePath, output := range fileOutputs {
@@ -63,7 +70,7 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 				if len(destination) == 0 {
 					fmt.Printf("\n------ %s ------\n%s\n", sourcePath, output)
 				} else {
-					targetPath := strings.ReplaceAll(fmt.Sprintf("%s%s", destination, sourcePath[len(filePath):]), "\\", "/")
+					targetPath := strings.ReplaceAll(fmt.Sprintf("%s%s", destination, sourcePath[len(target):]), "\\", "/")
 					elements := strings.Split(targetPath, "/")
 					if len(elements) > 1 {
 						targetParentPath := strings.Join(elements[:len(elements)-1], "/")
@@ -85,17 +92,14 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&options.IgnoreMissingVariables, "ignore", "i", options.IgnoreMissingVariables, "Whether to ignore the missing variables")
-
-	// TODO: --persist-choice
-	// i.e. when interactiveChoice is called for file 1, the variables entered should be saved and could be reused
-	// in file 2
-	//
+	cmd.Flags().BoolVarP(&options.IgnoreMissingVariables, "ignore", "i", options.IgnoreMissingVariables, "Whether to ignore missing variables. If not set, missing variables will trigger interactive mode")
+	cmd.Flags().BoolVarP(&options.Quick, "quick", "q", options.Quick, "Do not ask for value of variables that are already set. Requires -i to not be set")
+	cmd.Flags().BoolVarP(&options.Remember, "remember", "r", options.Remember, "Remember variables interactively set on one file for other files. Requires -i to not be set. Useless if TARGET is not directory")
 
 	return cmd
 }
 
-func installDirectory(fileOutputs map[string]string, filePath string, cfg *config.Config, ignoreMissingVariables bool) error {
+func installDirectory(fileOutputs map[string]string, filePath string, cfg *config.Config, options *Options) error {
 	dir, err := ioutil.ReadDir(filePath)
 	if err != nil {
 		return err
@@ -103,11 +107,11 @@ func installDirectory(fileOutputs map[string]string, filePath string, cfg *confi
 	for _, fi := range dir {
 		path := fmt.Sprintf("%s%s%s", filePath, string(os.PathSeparator), fi.Name())
 		if fi.IsDir() {
-			installDirectory(fileOutputs, path, cfg, ignoreMissingVariables)
+			installDirectory(fileOutputs, path, cfg, options)
 		} else {
-			output, err := install(path, cfg, ignoreMissingVariables)
+			output, err := install(path, cfg, options)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v", err.Error())
+				_, _ = fmt.Fprintf(os.Stderr, "%v", err.Error())
 			}
 			fileOutputs[path] = output
 		}
@@ -115,23 +119,31 @@ func installDirectory(fileOutputs map[string]string, filePath string, cfg *confi
 	return nil
 }
 
-func install(targetFilePath string, cfg *config.Config, ignoreMissingVariables bool) (string, error) {
-	content, variables, err := processTargetFile(targetFilePath, cfg, ignoreMissingVariables)
+func install(targetFilePath string, cfg *config.Config, options *Options) (string, error) {
+	content, variables, err := processTargetFile(targetFilePath, cfg, options)
 	if err != nil {
 		return "", err
 	}
 	return template.NewTemplate().WithVariables(variables).Replace(content), nil
 }
 
-func processTargetFile(targetFile string, cfg *config.Config, ignoreMissingVariables bool) (string, map[string]string, error) {
+func processTargetFile(targetFile string, cfg *config.Config, options *Options) (fileContent string, variables map[string]string, err error) {
 	rawContent, err := ioutil.ReadFile(targetFile)
 	if err != nil {
 		return "", nil, err
 	}
-	fileContent := string(rawContent)
-	variables := cfg.Variables
-	if !ignoreMissingVariables {
-		err = interactiveVariables(targetFile, fileContent, variables)
+	fileContent = string(rawContent)
+	if options.Remember {
+		variables = cfg.Variables
+	} else {
+		variables = make(map[string]string)
+		for k, v := range cfg.Variables {
+			variables[k] = v
+		}
+	}
+
+	if !options.IgnoreMissingVariables {
+		err = interactiveVariables(targetFile, fileContent, variables, options)
 		if err != nil {
 			return "", nil, err
 		}
@@ -139,8 +151,7 @@ func processTargetFile(targetFile string, cfg *config.Config, ignoreMissingVaria
 	return fileContent, variables, nil
 }
 
-func interactiveVariables(targetFile, fileContent string, variables map[string]string) error {
-	printEvenIfSetInConfigFile := true // TODO: externalize that variable
+func interactiveVariables(targetFile, fileContent string, variables map[string]string, options *Options) error {
 	variableNames, err := ExtractVariablesFromString(fileContent, "__")
 	if err != nil {
 		return err
@@ -148,7 +159,7 @@ func interactiveVariables(targetFile, fileContent string, variables map[string]s
 	printedInstructions := false
 	reader := bufio.NewReader(os.Stdin)
 	for _, variableName := range variableNames {
-		if _, exists := variables[variableName]; !exists || printEvenIfSetInConfigFile {
+		if _, exists := variables[variableName]; !exists || options.Quick {
 			if !printedInstructions {
 				printedInstructions = true
 				fmt.Printf("[%s]:\n", targetFile)
@@ -175,7 +186,7 @@ func ExtractVariablesFromString(s, wrapper string) (variableNames []string, err 
 	lines := strings.Split(s, "\n")
 	// Instead of doing it all at once, we'll do it line by line to reduce the odds of picking up a multiline variable
 	for _, line := range lines {
-		variablesInLine := getAllBetween(line, wrapper, wrapper)
+		variablesInLine := util.GetAllBetween(line, wrapper, wrapper)
 		for _, variable := range variablesInLine {
 			if strings.Contains(variable, " ") {
 				continue
@@ -184,28 +195,4 @@ func ExtractVariablesFromString(s, wrapper string) (variableNames []string, err 
 		}
 	}
 	return
-}
-
-// Get all substrings between two strings
-// This variation does not strip the suffix and the prefix from the substring
-func getAllBetween(haystack, prefix, suffix string) (needles []string) {
-	for {
-		if len(haystack) < len(prefix)+len(suffix) {
-			break
-		}
-		start := strings.Index(haystack, prefix) + len(prefix)
-		if start-len(prefix) == -1 {
-			break
-		}
-		end := strings.Index(haystack[start:], suffix) + start
-		if end-start == -1 || start >= end {
-			break
-		}
-		needles = append(needles, haystack[start-len(prefix):end+len(suffix)])
-		if len(haystack) <= end {
-			break
-		}
-		haystack = haystack[end+len(suffix):]
-	}
-	return needles
 }

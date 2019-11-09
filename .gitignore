@@ -1,2 +1,7 @@
 .idea
 bin
+test
+.gitignore
+.gemplater.yml
+.profile
+john

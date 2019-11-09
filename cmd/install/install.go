@@ -152,7 +152,7 @@ func processTargetFile(targetFile string, cfg *config.Config, options *Options) 
 }
 
 func interactiveVariables(targetFile, fileContent string, variables map[string]string, options *Options) error {
-	variableNames, err := ExtractVariablesFromString(fileContent, "__")
+	variableNames, err := util.ExtractVariablesFromString(fileContent, "__")
 	if err != nil {
 		return err
 	}
@@ -179,20 +179,4 @@ func interactiveVariables(targetFile, fileContent string, variables map[string]s
 		}
 	}
 	return nil
-}
-
-func ExtractVariablesFromString(s, wrapper string) (variableNames []string, err error) {
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	lines := strings.Split(s, "\n")
-	// Instead of doing it all at once, we'll do it line by line to reduce the odds of picking up a multiline variable
-	for _, line := range lines {
-		variablesInLine := util.GetAllBetween(line, wrapper, wrapper)
-		for _, variable := range variablesInLine {
-			if strings.Contains(variable, " ") {
-				continue
-			}
-			variableNames = append(variableNames, variable)
-		}
-	}
-	return
 }

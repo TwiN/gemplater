@@ -25,3 +25,19 @@ func GetAllBetween(haystack, prefix, suffix string) (needles []string) {
 	}
 	return needles
 }
+
+func ExtractVariablesFromString(s, wrapper string) (variableNames []string, err error) {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	lines := strings.Split(s, "\n")
+	// Instead of doing it all at once, we'll do it line by line to reduce the odds of picking up a multiline variable
+	for _, line := range lines {
+		variablesInLine := GetAllBetween(line, wrapper, wrapper)
+		for _, variable := range variablesInLine {
+			if strings.Contains(variable, " ") {
+				continue
+			}
+			variableNames = append(variableNames, variable)
+		}
+	}
+	return
+}

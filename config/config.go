@@ -16,9 +16,17 @@ type Config struct {
 	Variables map[string]string `yaml:"variables"`
 }
 
+// Creates a new Config struct with variables
+func NewConfig(variables map[string]string) *Config {
+	if variables == nil {
+		variables = make(map[string]string)
+	}
+	return &Config{Variables: variables}
+}
+
 // Creates a new Config struct
 // If the configuration file passed doesn't exist, an empty Config struct will be created instead.
-func NewConfig(configFile string) (*Config, error) {
+func ReadConfig(configFile string) (*Config, error) {
 	configuration, err := parseConfigFile(configFile)
 	// Check if the file doesn't exist. If it doesn't, then return en empty Config
 	if os.IsNotExist(err) {

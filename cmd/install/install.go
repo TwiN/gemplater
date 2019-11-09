@@ -29,7 +29,7 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 	cfg, err := config.Get()
 	// If the config hasn't been loaded, then load it
 	if err == config.ErrConfigNotLoaded {
-		if cfg, err = config.NewConfig(globalOptions.ConfigFile); err != nil {
+		if cfg, err = config.ReadConfig(globalOptions.ConfigFile); err != nil {
 			panic(err)
 		}
 	} else if err != nil {
@@ -127,12 +127,12 @@ func install(targetFilePath string, cfg *config.Config, options *Options) (strin
 	return template.NewTemplate().WithVariables(variables).Replace(content), nil
 }
 
-func processTargetFile(targetFile string, cfg *config.Config, options *Options) (fileContent string, variables map[string]string, err error) {
-	rawContent, err := ioutil.ReadFile(targetFile)
+func processTargetFile(targetFile string, cfg *config.Config, options *Options) (content string, variables map[string]string, err error) {
+	raw, err := ioutil.ReadFile(targetFile)
 	if err != nil {
 		return "", nil, err
 	}
-	fileContent = string(rawContent)
+	content = string(raw)
 	if options.Remember {
 		variables = cfg.Variables
 	} else {
@@ -143,12 +143,12 @@ func processTargetFile(targetFile string, cfg *config.Config, options *Options) 
 	}
 
 	if !options.IgnoreMissingVariables {
-		err = interactiveVariables(targetFile, fileContent, variables, options)
+		err = interactiveVariables(targetFile, content, variables, options)
 		if err != nil {
 			return "", nil, err
 		}
 	}
-	return fileContent, variables, nil
+	return
 }
 
 func interactiveVariables(targetFile, fileContent string, variables map[string]string, options *Options) error {
@@ -159,13 +159,13 @@ func interactiveVariables(targetFile, fileContent string, variables map[string]s
 	printedInstructions := false
 	reader := bufio.NewReader(os.Stdin)
 	for _, variableName := range variableNames {
-		if _, exists := variables[variableName]; !exists || options.Quick {
+		if defaultValue, exists := variables[variableName]; !exists || options.Quick {
 			if !printedInstructions {
 				printedInstructions = true
 				fmt.Printf("[%s]:\n", targetFile)
 			}
 			if exists && len(variables[variableName]) != 0 {
-				fmt.Printf("Enter value for '%s' (default: %s): ", variableName, variables[variableName])
+				fmt.Printf("Enter value for '%s' (default: %s): ", variableName, defaultValue)
 				value, _ := reader.ReadString('\n')
 				value = strings.TrimSpace(value)
 				if len(value) != 0 {

@@ -26,7 +26,7 @@ gemplater install dotfiles ~/ --quick --remember
 
 Flags:
 ```
--h, --help            help for install
+-h, --help            Help for install
 -i, --ignore          Whether to ignore missing variables. If not set, missing variables will trigger interactive mode
 -q, --quick           Do not ask for value of variables that are already set. Requires -i to not be set
 -r, --remember        Remember variables interactively set on one file for other files. Requires -i to not be set. Useless if TARGET is not directory
@@ -55,6 +55,7 @@ gemplater init .profile
 Flags:
 
 ```
+-h, --help            Help for init
 -c, --config string   Specify configuration file to use (default ".gemplater.yml")
 ```
 

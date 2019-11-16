@@ -9,6 +9,7 @@ import (
 	"github.com/TwinProduction/gemplater/util"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -179,4 +180,16 @@ func interactiveVariables(targetFile, fileContent string, variables map[string]s
 		}
 	}
 	return nil
+}
+
+func getFileContentFromUrl(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }

@@ -65,7 +65,6 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 				}
 				fileOutputs[target] = output
 			}
-
 			for sourcePath, output := range fileOutputs {
 				// If no destination provided, output to stdout
 				if len(destination) == 0 {
@@ -142,7 +141,6 @@ func processTargetFile(targetFile string, cfg *config.Config, options *Options) 
 			variables[k] = v
 		}
 	}
-
 	if !options.IgnoreMissingVariables {
 		err = interactiveVariables(targetFile, content, variables, options)
 		if err != nil {

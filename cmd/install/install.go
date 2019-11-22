@@ -26,7 +26,6 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 		Quick:                  false,
 		Remember:               false,
 	}
-
 	cfg, err := config.Get()
 	// If the config hasn't been loaded, then load it
 	if err == config.ErrConfigNotLoaded {
@@ -36,7 +35,6 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 	} else if err != nil {
 		panic(err)
 	}
-
 	cmd := &cobra.Command{
 		Use:     "install TARGET [DESTINATION]",
 		Aliases: []string{"i"},

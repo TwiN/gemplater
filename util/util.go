@@ -1,6 +1,9 @@
 package util
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // Get all substrings between two strings
 // This variation does not strip the suffix and the prefix from the substring
@@ -40,4 +43,9 @@ func ExtractVariablesFromString(s, wrapper string) (variableNames []string, err 
 		}
 	}
 	return
+}
+
+func GenerateCuteHeader(s string) string {
+	bread := strings.Repeat("#", len(s)+4)
+	return fmt.Sprintf("%s\n# %s #\n%s\n", bread, s, bread)
 }

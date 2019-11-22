@@ -89,22 +89,18 @@ func initialize(targetFile string, cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	printedInstructions := false
+	printedFileName := false
 	reader := bufio.NewReader(os.Stdin)
 	for _, variableName := range variableNames {
+		if !printedFileName {
+			printedFileName = true
+			fmt.Printf("\n[%s]:\n", targetFile)
+		}
 		if value, exists := cfg.Variables[variableName]; !exists {
-			if !printedInstructions {
-				printedInstructions = true
-				fmt.Printf("\n[%s]:\n", targetFile)
-			}
 			fmt.Printf("Enter value for '%s': ", variableName)
 			value, _ := reader.ReadString('\n')
 			cfg.Variables[variableName] = strings.TrimSpace(value)
 		} else {
-			if !printedInstructions {
-				printedInstructions = true
-				fmt.Printf("\n[%s]:\n", targetFile)
-			}
 			fmt.Printf("Skipping variable '%s', because it is already set to '%s'\n", variableName, value)
 			continue
 		}

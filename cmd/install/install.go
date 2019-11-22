@@ -18,6 +18,7 @@ type Options struct {
 	IgnoreMissingVariables bool // -i --ignore
 	Quick                  bool // -q --quick
 	Remember               bool // -r --remember
+	NoHeaders              bool // -n --no-headers
 }
 
 func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
@@ -25,6 +26,7 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 		IgnoreMissingVariables: false,
 		Quick:                  false,
 		Remember:               false,
+		NoHeaders:              false,
 	}
 	cfg, err := config.Get()
 	// If the config hasn't been loaded, then load it
@@ -66,7 +68,11 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 			for sourcePath, output := range fileOutputs {
 				// If no destination provided, output to stdout
 				if len(destination) == 0 {
-					fmt.Printf("\n------ %s ------\n%s\n", sourcePath, output)
+					if options.NoHeaders {
+						fmt.Printf("%s\n", output)
+					} else {
+						fmt.Printf("%s%s\n", util.GenerateCuteHeader(fmt.Sprintf("Source: %s", sourcePath)), output)
+					}
 				} else {
 					targetPath := strings.ReplaceAll(fmt.Sprintf("%s%s", destination, sourcePath[len(target):]), "\\", "/")
 					elements := strings.Split(targetPath, "/")
@@ -93,6 +99,7 @@ func NewInstallCmd(globalOptions *core.GlobalOptions) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.IgnoreMissingVariables, "ignore", "i", options.IgnoreMissingVariables, "Whether to ignore missing variables. If not set, missing variables will trigger interactive mode")
 	cmd.Flags().BoolVarP(&options.Quick, "quick", "q", options.Quick, "Do not ask for value of variables that are already set. Requires -i to not be set")
 	cmd.Flags().BoolVarP(&options.Remember, "remember", "r", options.Remember, "Remember variables interactively set on one file for other files. Requires -i to not be set. Useless if TARGET is not directory")
+	cmd.Flags().BoolVarP(&options.NoHeaders, "no-headers", "n", options.NoHeaders, "Print header in each file containing the source file. Only applies when no destination is provided")
 
 	return cmd
 }

@@ -74,3 +74,11 @@ func TestExtractVariablesFromStringWithBadMultilineVariable(t *testing.T) {
 		t.Errorf("Expected 0 variables, but got %d instead\n", len(variables))
 	}
 }
+
+func TestGenerateCuteHeader(t *testing.T) {
+	output := GenerateCuteHeader("Test")
+	expected := "########\n# Test #\n########\n"
+	if output != expected {
+		t.Errorf("Expected '%s', but got '%s' instead", expected, output)
+	}
+}

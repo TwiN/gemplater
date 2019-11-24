@@ -28,6 +28,7 @@ Flags:
 ```
 -h, --help            Help for install
 -i, --ignore          Whether to ignore missing variables. If not set, missing variables will trigger interactive mode
+-n, --no-headers      Print header in each file containing the source file. Only applies when no destination is provided
 -q, --quick           Do not ask for value of variables that are already set. Requires -i to not be set
 -r, --remember        Remember variables interactively set on one file for other files. Requires -i to not be set. Useless if TARGET is not directory
 -c, --config string   Specify configuration file to use (default ".gemplater.yml")
@@ -58,9 +59,3 @@ Flags:
 -h, --help            Help for init
 -c, --config string   Specify configuration file to use (default ".gemplater.yml")
 ```
-
-
-...
-
-default config file: `.gemplater.yml`
-
